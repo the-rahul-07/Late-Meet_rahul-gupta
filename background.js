@@ -467,9 +467,13 @@ async function scanForMeetTabs() {
         const meetingId = urlMatch ? urlMatch[1] : null;
         if (meetingId && meetingId !== 'new') {
           if (!state.isActive) {
+            resetState();
+            state.isActive = true;
             state.meetingId = meetingId;
             state.meetingUrl = tab.url;
             state.targetTabId = tab.id;
+            state.startTime = Date.now();
+            state.participants = ['You']; 
             console.log('[LateMeet] Proactively detected meeting:', meetingId);
             await broadcastStateUpdate();
           }
@@ -515,12 +519,13 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     
     if (meetingId && meetingId !== 'new') {
       if (!state.isActive) {
+        resetState();
+        state.isActive = true;
         state.meetingId = meetingId;
         state.meetingUrl = tab.url;
         state.targetTabId = tabId;
-        // We don't set isActive = true yet to avoid starting session logic 
-        // until either audio starts or we decide to auto-start.
-        // But we broadcast the update so popup can show "Meeting available"
+        state.startTime = Date.now();
+        state.participants = ['You'];
         await broadcastStateUpdate();
       }
     }

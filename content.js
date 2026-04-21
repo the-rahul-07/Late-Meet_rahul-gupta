@@ -157,7 +157,7 @@
   }
 
   function collectParticipants() {
-    const names = new Set();
+    const names = new Set(['You']);
 
     // 1. Check for specific participant nodes (side panel or tiles)
     for (const selector of SELECTORS.participantNodes) {
@@ -207,7 +207,6 @@
 
     participantPollTimer = setInterval(async () => {
       const participants = collectParticipants();
-      if (participants.length === 0) return;
 
       try {
         await chrome.runtime.sendMessage({
