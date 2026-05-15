@@ -1,3 +1,5 @@
+import { collectParticipantNames, type ParticipantNameCandidate } from './participantDetection';
+
 (() => {
   const COPILOT_PREFIX = '[LateMeet]';
 
@@ -21,7 +23,7 @@
     participantNodes: [
       '[data-participant-id] [data-self-name]',
       '[data-participant-id] [role="heading"]',
-      '[data-participant-id] [aria-label]',
+      '[data-participant-id][aria-label^="Participant:"]',
       '[data-self-name]', // The tile for the local user
       'div[jsname="NfX98"]', // Common class for names on video tiles
       '[aria-label^="Participant:"]' // Tile aria-labels
@@ -29,8 +31,6 @@
     showEveryoneBtn: '[aria-label*="Show everyone"]'
   };
   
-  const MAX_PARTICIPANT_NAME_LEN = 120;
-
   function queryFirst(selectors: string[], root: Document | HTMLElement = document): HTMLElement | null {
     for (const selector of selectors) {
       const el = root.querySelector(selector);
@@ -167,29 +167,26 @@
   }
 
   function collectParticipants(): string[] {
-    const names = new Set(['You']);
+    const candidates: ParticipantNameCandidate[] = [];
 
     for (const selector of SELECTORS.participantNodes) {
       document.querySelectorAll(selector).forEach(node => {
-        const label = node.getAttribute('aria-label');
-        const cleanLabel = label ? label.replace(/^Participant:\s*/, '') : null;
-        const text = (cleanLabel || getTextValue(node as HTMLElement)).trim();
-        
-        if (text && text.length < MAX_PARTICIPANT_NAME_LEN && !text.includes('…')) {
-          if (!['Meeting host', 'You', 'Presentation', 'Muted', 'Audio on'].includes(text)) {
-            names.add(text);
-          }
-        }
+        const element = node as HTMLElement;
+        candidates.push({
+          ariaLabel: element.getAttribute('aria-label'),
+          selfName: element.getAttribute('data-self-name'),
+          text: getTextValue(element)
+        });
       });
     }
 
     const selfNode = document.querySelector('[data-self-name]');
     if (selfNode) {
       const selfName = selfNode.getAttribute('data-self-name');
-      if (selfName) names.add(selfName);
+      if (selfName) candidates.push({ selfName });
     }
 
-    return [...names].filter(n => n.length > 0);
+    return collectParticipantNames(candidates);
   }
 
   let participantPollTimer: number | NodeJS.Timeout | null = null;
