@@ -136,13 +136,14 @@ async function broadcastStateUpdate() {
 }
 
 async function getApiKey() {
-  const result = await chrome.storage.local.get("openai_api_key");
+  const result = await chrome.storage.session.get("openai_api_key");
   return result.openai_api_key || null;
 }
 
 interface Settings {
   summarizationInterval?: number;
   aiModel?: string;
+  vadThreshold?: number;
 }
 
 async function getSettings(): Promise<Settings> {
@@ -171,6 +172,11 @@ async function ensureOffscreenDocument() {
     reasons: ["USER_MEDIA" as any],
     justification: "Capture Google Meet tab audio for local transcription",
   });
+
+  // createDocument resolves when the document is created, but the offscreen JS
+  // still needs a moment to execute and register its chrome.runtime.onMessage
+  // listener. Without this delay the first OFFSCREEN_START_CAPTURE is lost.
+  await new Promise((resolve) => setTimeout(resolve, 200));
 }
 
 async function closeOffscreenDocumentIfPresent() {
@@ -197,7 +203,7 @@ function getTranscriptionPrompt() {
 async function transcribeChunk(base64Audio: string, mimeType = "audio/webm", prompt = "") {
   // Use ElevenLabs API key if available, fallback to OpenAI if not?
   // No, the requirement is to use ElevenLabs.
-  const elevenlabsKey = await chrome.storage.local
+  const elevenlabsKey = await chrome.storage.session
     .get("elevenlabs_api_key")
     .then((r) => r.elevenlabs_api_key);
 
@@ -600,7 +606,9 @@ async function startAudioCapture(
 
   await ensureOffscreenDocument();
 
-  if (!state.isActive) {
+  const createdSession = !state.isActive;
+
+  if (createdSession) {
     resetState();
     state.isActive = true;
     state.startTime = Date.now();
@@ -635,11 +643,16 @@ async function startAudioCapture(
       );
     }
 
+    const settings = await getSettings();
+    const raw = settings.vadThreshold;
+    const vadThreshold =
+      typeof raw === "number" && Number.isFinite(raw) && raw > 0 && raw <= 1 ? raw : 0.012;
     const response = await chrome.runtime.sendMessage({
       type: "OFFSCREEN_START_CAPTURE",
       streamId,
       tabId,
       includeMicrophone,
+      vadThreshold,
     });
 
     if (!response?.success) {
@@ -654,6 +667,10 @@ async function startAudioCapture(
     await broadcastStateUpdate();
   } catch (err) {
     state.audioActive = false;
+    if (createdSession) {
+      resetState();
+      await broadcastStateUpdate();
+    }
     throw err;
   }
 }
@@ -807,6 +824,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return;
       }
 
+      case "OFFSCREEN_LOG": {
+        // Relay log lines from the offscreen document into the SW console so
+        // they are visible without opening the offscreen DevTools separately.
+        console.log("[LateMeet][offscreen]", message.message);
+        sendResponse({ success: true });
+        return;
+      }
+
       case "OFFSCREEN_CAPTURE_STOPPED": {
         state.audioActive = false;
         await broadcastStateUpdate();
@@ -816,24 +841,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       case "OFFSCREEN_AUDIO_CHUNK": {
         if (!state.isActive) {
+          console.warn("[LateMeet] chunk received but session not active — ignored");
           sendResponse({ success: true, ignored: true });
           return;
         }
 
+        const base64Len = message.audioBase64?.length ?? 0;
+        const approxBytes = Math.round((base64Len * 3) / 4);
+        console.log(
+          `[LateMeet] chunk received — ~${approxBytes} bytes  mimeType=${message.mimeType}`,
+        );
+
         try {
           const prompt = getTranscriptionPrompt();
           const rawText = await transcribeChunk(message.audioBase64, message.mimeType, prompt);
-          console.log("[LateMeet] Raw transcription:", rawText);
           if (rawText) {
+            console.log(`[LateMeet] transcript received — ${rawText.length} chars`);
             const refinedText = await refineTranscription(rawText);
-            console.log("[LateMeet] Refined transcription:", refinedText);
+            console.log(`[LateMeet] transcript refined — ${refinedText.length} chars`);
             state.transcript.push({ speaker: "Audio", text: refinedText, timestamp: Date.now() });
             await summarizeTranscriptIfNeeded();
             await broadcastStateUpdate();
+          } else {
+            console.warn("[LateMeet] STT returned empty — chunk may be silent or too short");
           }
           sendResponse({ success: true });
         } catch (err) {
-          console.error("[LateMeet] Audio chunk processing failed:", err);
+          console.error("[LateMeet] chunk processing failed:", err);
           sendResponse({ success: false, error: (err as Error).message });
         }
         return;
