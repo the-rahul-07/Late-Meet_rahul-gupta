@@ -12,7 +12,7 @@ const ELEVENLABS_STT_MODEL = "scribe_v2";
 // Delay late-joiner auto messages until 10s to avoid lobby/join churn spam.
 const MIN_MEETING_DURATION_FOR_WELCOME = 10;
 
-import { State } from "./types";
+import { State, ActionItem } from "./types";
 import { audioFileExtensionForMimeType, isChunkViable } from "./audioProcessing";
 
 const state: State = {
@@ -41,6 +41,7 @@ const state: State = {
 };
 
 let selfParticipantName: string | null = null;
+const notifiedActionItems = new Set<string>();
 
 function normalizeParticipantName(value: string | null | undefined): string {
   return String(value || "")
@@ -72,6 +73,7 @@ function resetState() {
   state.pendingJoiners.clear();
   state.participantCount = 0;
   selfParticipantName = null;
+  notifiedActionItems.clear();
 }
 
 function addTimeline(event: string) {
@@ -431,7 +433,10 @@ Return a JSON object with these exact keys:
   state.summary = parsed.summary || state.summary;
   state.topics = Array.isArray(parsed.topics) ? parsed.topics : state.topics;
   state.decisions = Array.isArray(parsed.decisions) ? parsed.decisions : state.decisions;
-  state.actionItems = Array.isArray(parsed.actionItems) ? parsed.actionItems : state.actionItems;
+  if (Array.isArray(parsed.actionItems)) {
+    state.actionItems = parsed.actionItems;
+    notifyNewActionItems(state.actionItems);
+  }
   state.currentTopic = parsed.currentTopic || state.currentTopic;
   state.sentiment = parsed.sentiment || state.sentiment;
   state.keyInsights = Array.isArray(parsed.keyInsights) ? parsed.keyInsights : state.keyInsights;
@@ -439,6 +444,31 @@ Return a JSON object with these exact keys:
     ? parsed.questionsRaised
     : state.questionsRaised;
   state.lastSummarizedAt = Date.now();
+}
+
+function actionItemKey(item: ActionItem | unknown): string {
+  if (item && typeof item === "object" && "task" in (item as object)) {
+    return ((item as ActionItem).task || "").trim();
+  }
+  return String(item || "").trim();
+}
+
+function notifyNewActionItems(items: ActionItem[]) {
+  if (!chrome.notifications) return;
+  for (const item of items) {
+    const key = actionItemKey(item);
+    if (!key || notifiedActionItems.has(key)) continue;
+    notifiedActionItems.add(key);
+    const message = key.length > 100 ? key.slice(0, 97) + "..." : key;
+    const notifId = `lm-action-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    chrome.notifications.create(notifId, {
+      type: "basic",
+      iconUrl: chrome.runtime.getURL("src/icons/icon128.png"),
+      title: "New Action Item",
+      message,
+      priority: 1,
+    });
+  }
 }
 
 function detectNewJoiners(currentList: string[]) {
