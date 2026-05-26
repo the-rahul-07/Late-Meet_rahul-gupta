@@ -509,9 +509,10 @@ Return a JSON object with these exact keys:
 
 function actionItemKey(item: ActionItem | unknown): string {
   if (item && typeof item === "object" && "task" in (item as object)) {
-    return ((item as ActionItem).task || "").trim();
+    const task = (item as { task?: unknown }).task;
+    return String(task ?? "").trim();
   }
-  return String(item || "").trim();
+  return String(item ?? "").trim();
 }
 
 function notifyNewActionItems(items: ActionItem[]) {
