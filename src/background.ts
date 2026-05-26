@@ -16,7 +16,9 @@ const ELEVENLABS_STT_MODEL = "scribe_v2";
 const MIN_MEETING_DURATION_FOR_WELCOME = 10;
 
 import { State, ActionItem } from "./types";
+import { ActionItem, Decision, State } from "./types";
 import { audioFileExtensionForMimeType, isChunkViable } from "./audioProcessing";
+import { getElevenLabsApiKey, getOpenAiApiKey } from "./utils/credentials";
 
 const state: State = {
   isActive: false,
@@ -37,6 +39,7 @@ const state: State = {
   timeline: [],
   transcript: [],
   audioActive: false,
+  currentSpeaker: null,
   targetTabId: null,
   lastSummarizedAt: 0,
   pendingJoiners: new Set(),
@@ -45,6 +48,9 @@ const state: State = {
 
 let selfParticipantName: string | null = null;
 const notifiedActionItems = new Set<string>();
+let activeSpeakerName: string | null = null;
+let activeSpeakerUpdatedAt = 0;
+const ACTIVE_SPEAKER_TTL_MS = 15000;
 
 function normalizeParticipantName(value: string | null | undefined): string {
   return String(value || "")
@@ -71,12 +77,15 @@ function resetState() {
   state.timeline = [];
   state.transcript = [];
   state.audioActive = false;
+  state.currentSpeaker = null;
   state.targetTabId = null;
   state.lastSummarizedAt = 0;
   state.pendingJoiners.clear();
   state.participantCount = 0;
   selfParticipantName = null;
   notifiedActionItems.clear();
+  activeSpeakerName = null;
+  activeSpeakerUpdatedAt = 0;
 }
 
 function addTimeline(event: string) {
@@ -112,8 +121,17 @@ function snapshot() {
     timeline: state.timeline,
     transcript: state.transcript,
     audioActive: state.audioActive,
+    currentSpeaker: state.currentSpeaker,
     participantCount: state.participantCount,
   };
+}
+
+function getSpeakerForCurrentChunk(): string {
+  if (activeSpeakerName && Date.now() - activeSpeakerUpdatedAt <= ACTIVE_SPEAKER_TTL_MS) {
+    return activeSpeakerName;
+  }
+
+  return "Audio";
 }
 
 async function broadcastStateUpdate() {
@@ -138,13 +156,6 @@ async function broadcastStateUpdate() {
   } catch {
     /* ignore */
   }
-}
-
-async function getApiKey() {
-  const sessionResult = await chrome.storage.session.get("openai_api_key");
-  if (sessionResult.openai_api_key) return sessionResult.openai_api_key;
-  const localResult = await chrome.storage.local.get("openai_api_key");
-  return localResult.openai_api_key || null;
 }
 
 interface Settings {
@@ -173,6 +184,66 @@ function sanitizePromptText(value: string | null) {
     .replace(/```/g, "")
     .replace(/[<>{}]/g, " ")
     .slice(0, MAX_PROMPT_LENGTH);
+}
+
+function sanitizeOptionalField(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const sanitized = sanitizePromptText(value).trim();
+  return sanitized || undefined;
+}
+
+function normalizeDecisions(value: unknown, fallback: Decision[]): Decision[] {
+  if (!Array.isArray(value)) return fallback;
+
+  return value
+    .map((item) => {
+      if (typeof item === "string") {
+        const text = sanitizeOptionalField(item);
+        return text ? { text } : null;
+      }
+
+      if (item && typeof item === "object") {
+        const record = item as Record<string, unknown>;
+        const text = sanitizeOptionalField(record.text);
+        if (!text) return null;
+
+        return {
+          text,
+          by: sanitizeOptionalField(record.by),
+          timestamp: sanitizeOptionalField(record.timestamp),
+        };
+      }
+
+      return null;
+    })
+    .filter((item): item is Decision => Boolean(item));
+}
+
+function normalizeActionItems(value: unknown, fallback: ActionItem[]): ActionItem[] {
+  if (!Array.isArray(value)) return fallback;
+
+  return value
+    .map((item) => {
+      if (typeof item === "string") {
+        const task = sanitizeOptionalField(item);
+        return task ? { task } : null;
+      }
+
+      if (item && typeof item === "object") {
+        const record = item as Record<string, unknown>;
+        const task = sanitizeOptionalField(record.task);
+        if (!task) return null;
+
+        return {
+          task,
+          owner: sanitizeOptionalField(record.owner),
+          deadline: sanitizeOptionalField(record.deadline),
+        };
+      }
+
+      return null;
+    })
+    .filter((item): item is ActionItem => Boolean(item));
 }
 
 async function ensureOffscreenDocument() {
@@ -219,14 +290,7 @@ function getTranscriptionPrompt() {
 async function transcribeChunk(base64Audio: string, mimeType = "audio/webm", prompt = "") {
   // Use ElevenLabs API key if available, fallback to OpenAI if not?
   // No, the requirement is to use ElevenLabs.
-  let elevenlabsKey = await chrome.storage.session
-    .get("elevenlabs_api_key")
-    .then((r) => r.elevenlabs_api_key);
-  if (!elevenlabsKey) {
-    elevenlabsKey = await chrome.storage.local
-      .get("elevenlabs_api_key")
-      .then((r) => r.elevenlabs_api_key);
-  }
+  const elevenlabsKey = await getElevenLabsApiKey();
 
   const bytes = Uint8Array.from(atob(base64Audio), (c) => c.charCodeAt(0));
   const blob = new Blob([bytes], { type: mimeType });
@@ -285,7 +349,7 @@ async function transcribeChunk(base64Audio: string, mimeType = "audio/webm", pro
   }
 
   // Fallback to Whisper
-  const apiKey = await getApiKey();
+  const apiKey = await getOpenAiApiKey();
   if (!apiKey) return null;
 
   const normalizedMime = mimeType.split(";")[0].trim();
@@ -323,7 +387,7 @@ async function refineTranscription(rawText: string) {
   const words = rawText.trim().split(/\s+/);
   if (words.length < 3) return rawText;
 
-  const apiKey = await getApiKey();
+  const apiKey = await getOpenAiApiKey();
   if (!apiKey) return rawText;
 
   const systemPrompt = `You are an expert AI transcription editor. 
@@ -384,7 +448,7 @@ async function summarizeTranscriptIfNeeded() {
   const elapsed = Math.floor((Date.now() - lastSum) / 1000);
   if (lastSum > 0 && elapsed < intervalSeconds) return;
 
-  const apiKey = await getApiKey();
+  const apiKey = await getOpenAiApiKey();
   if (!apiKey) return;
 
   const transcriptWindow = state.transcript
@@ -405,8 +469,12 @@ async function summarizeTranscriptIfNeeded() {
           '"currentTopic": "Identifying the current main topic"',
         ]
       : []),
-    ...(decisionDetectionEnabled ? ['"decisions": ["Decision 1", ...]'] : []),
-    ...(actionExtractionEnabled ? ['"actionItems": ["Action 1", ...]'] : []),
+    ...(decisionDetectionEnabled
+      ? ['"decisions": [{"text": "Decision", "by": "optional speaker", "timestamp": "optional"}]']
+      : []),
+    ...(actionExtractionEnabled
+      ? ['"actionItems": [{"task": "Action", "owner": "optional owner", "deadline": "optional"}]']
+      : []),
     ...(sentimentAnalysisEnabled ? ['"sentiment": "positive|neutral|negative|mixed"'] : []),
     '"keyInsights": ["Insight 1", ...]',
     '"questionsRaised": ["Question 1", ...]',
@@ -419,8 +487,8 @@ OUTPUT GUIDELINES:
 - Provide a concise yet professional summary (business grade).
 - Extract only the fields requested by the user prompt.
 ${topicDetectionEnabled ? "- Identify distinct topics and their statuses (active/completed)." : ""}
-${decisionDetectionEnabled ? "- Precisely capture decisions if mentioned." : ""}
-${actionExtractionEnabled ? "- Precisely capture action items with assignees if mentioned." : ""}
+${decisionDetectionEnabled ? '- Precisely capture decisions as objects with a required "text" field and optional "by" and "timestamp" fields.' : ""}
+${actionExtractionEnabled ? '- Precisely capture action items as objects with a required "task" field and optional "owner" and "deadline" fields.' : ""}
 ${sentimentAnalysisEnabled ? "- Detect the prevailing sentiment and emotional dynamics." : ""}
 - Extract "Key Insights" that go beyond a simple summary (strategic value).
 - Track specific questions raised that remain unanswered.
@@ -478,7 +546,7 @@ Return a JSON object with these exact keys:
     state.currentTopic = "";
   }
   if (decisionDetectionEnabled) {
-    state.decisions = Array.isArray(parsed.decisions) ? parsed.decisions : state.decisions;
+    state.decisions = normalizeDecisions(parsed.decisions, state.decisions);
   } else {
     state.decisions = [];
   }
@@ -487,6 +555,7 @@ Return a JSON object with these exact keys:
       state.actionItems = parsed.actionItems;
       notifyNewActionItems(state.actionItems);
     }
+    state.actionItems = normalizeActionItems(parsed.actionItems, state.actionItems);
   } else {
     state.actionItems = [];
   }
@@ -591,7 +660,7 @@ async function generateLateJoinerMessage(joinerName: string) {
   const fallback = `Hi ${joinerName}, welcome to the meeting! We are currently discussing ${context.currentTopic || "project updates"}.`;
 
   try {
-    const apiKey = await getApiKey();
+    const apiKey = await getOpenAiApiKey();
     if (!apiKey) return fallback;
 
     const prompt = `A participant named ${safeJoinerName} joined late. Meeting duration: ${Math.round(context.duration / 60)} minutes. Current topic: ${sanitizePromptText(context.currentTopic || "General discussion")}. Recent topics: ${sanitizePromptText(JSON.stringify(context.topics || []))}. Decisions: ${sanitizePromptText(JSON.stringify(context.decisions || []))}. Write a short welcome message under 3 sentences. Output plain text only.`;
@@ -948,6 +1017,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return;
         }
 
+        const chunkSpeaker = getSpeakerForCurrentChunk();
         const base64Len = message.audioBase64?.length ?? 0;
         const approxBytes = Math.round((base64Len * 3) / 4);
         console.log(
@@ -961,7 +1031,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             console.log(`[LateMeet] transcript received — ${rawText.length} chars`);
             const refinedText = await refineTranscription(rawText);
             console.log(`[LateMeet] transcript refined — ${refinedText.length} chars`);
-            state.transcript.push({ speaker: "Audio", text: refinedText, timestamp: Date.now() });
+            state.transcript.push({
+              speaker: chunkSpeaker,
+              text: refinedText,
+              timestamp: Date.now(),
+            });
             await summarizeTranscriptIfNeeded();
             await broadcastStateUpdate();
           } else {
@@ -972,6 +1046,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           console.error("[LateMeet] chunk processing failed:", err);
           sendResponse({ success: false, error: (err as Error).message });
         }
+        return;
+      }
+
+      case "ACTIVE_SPEAKER_CHANGED": {
+        const speaker = typeof message.name === "string" ? message.name.trim() : "";
+
+        if (!speaker) {
+          sendResponse({ success: false, error: "speaker name is required" });
+          return;
+        }
+
+        activeSpeakerName = speaker;
+        activeSpeakerUpdatedAt = Date.now();
+        state.currentSpeaker = speaker;
+        sendResponse({ success: true });
         return;
       }
 
