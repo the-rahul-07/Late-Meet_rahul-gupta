@@ -226,7 +226,6 @@ document.addEventListener("DOMContentLoaded", async () => {
               handleDashboardAudioError(
                 new Error('Capture permission denied. Try clicking "Start Audio" again.'),
               );
-              return;
             }
 
             try {
@@ -234,7 +233,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 type: "MANUAL_START_AUDIO",
                 tabId: meetTab.id,
                 meetingId: meetingId,
-                meetingUrl: meetingUrl,
+                meetingUrl: meetingUrl || meetTab.url || null,
                 streamId: streamId,
                 includeMicrophone: true,
               });
