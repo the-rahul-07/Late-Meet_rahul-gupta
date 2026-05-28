@@ -226,9 +226,9 @@ export async function validateOpenAIKey(apiKey: string): Promise<boolean> {
 }
 
 /**
- * @description Validates if an ElevenLabs API key is valid and has proper permissions
+ * @description Validates if an ElevenLabs API key is valid and accessible
  * @param {string} apiKey - The ElevenLabs API key to validate
- * @returns {Promise<boolean>} True if valid, false otherwise (times out after 5 seconds)
+ * @returns {Promise<boolean>} True if the key is valid and accessible, false otherwise (times out after 5 seconds)
  * @example
  *   const isValid = await validateElevenLabsKey("xxxxx-api-key");
  *   if (isValid) console.log("ElevenLabs API key is working!");
