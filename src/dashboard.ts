@@ -404,9 +404,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     list.innerHTML = insights
       .map((i) => {
         const text = typeof i === "string" ? i : i.text || "";
+        const rawScore =
+          typeof i === "object" && i !== null ? (i as { confidenceScore?: unknown }).confidenceScore : undefined;
+        const parsedScore =
+          typeof rawScore === "number" ? rawScore : Number(rawScore);
+        const safeScore = Number.isFinite(parsedScore)
+          ? Math.max(0, Math.min(100, parsedScore))
+          : null;
         const score =
-          typeof i === "object" && i.confidenceScore
-            ? ` <span style="font-size: 11px; color: #9ca3af;">(Conf: ${i.confidenceScore}%)</span>`
+          safeScore !== null
+            ? ` <span style="font-size: 11px; color: `#9ca3af`;">(Conf: ${safeScore}%)</span>`
             : "";
         return `<li>${escapeHtml(text)}${score}</li>`;
       })
