@@ -10,6 +10,8 @@
 [![MIT License Badge](https://img.shields.io/badge/License-MIT-black?style=for-the-badge)](LICENSE)
 [![Supported Platform: Google Meet](https://img.shields.io/badge/Platform-Google_Meet-black?style=for-the-badge&logo=googlemeet)](https://meet.google.com)
 [![Pull Requests Welcome Badge](https://img.shields.io/badge/PRs-welcome-black?style=for-the-badge)](CONTRIBUTING.md)
+[![Documentation](https://img.shields.io/badge/Docs-Complete_Hub-blue?style=for-the-badge&logo=readthedocs&logoColor=white)](docs/GETTING_STARTED.md)
+[![Demo GIF](https://img.shields.io/badge/Demo-GIF_Available-green?style=for-the-badge&logo=github&logoColor=white)](docs/assets/demo/late-meet-workflow.gif)
 
 </div>
 
@@ -23,6 +25,8 @@
 
 - [Product Preview](#product-preview)
 - [Documentation Hub](#documentation-hub)
+- [Interactive Documentation](#interactive-documentation)
+- [Project Snapshot](#project-snapshot)
 - [Getting Started](docs/GETTING_STARTED.md)
 - [Workflow Guide](docs/WORKFLOW.md)
 - [Demo Assets](docs/DEMO.md)
@@ -123,6 +127,53 @@ The workflow preview covers extension loading, popup usage, Google Meet launch, 
 | [FAQ](FAQ.md)                                  | Read common product and setup questions.                                          |
 | [Glossary](GLOSSARY.md)                        | Understand project terms and extension concepts.                                  |
 | [Testing Guide](TESTING.md)                    | Run and understand local testing expectations.                                    |
+
+---
+
+## Interactive Documentation
+
+<details>
+<summary>Quick start path</summary>
+
+1. Read [Getting Started](docs/GETTING_STARTED.md).
+2. Build the extension with `npm run build`.
+3. Load `dist/` from `chrome://extensions`.
+4. Configure provider keys with [API Key Setup](docs/API_KEYS.md).
+5. Follow the [Workflow Guide](docs/WORKFLOW.md).
+
+</details>
+
+<details>
+<summary>Demo and visual assets</summary>
+
+- Watch the workflow preview in [Demo Assets](docs/DEMO.md).
+- Review screenshots in [Product Preview](#product-preview).
+- Follow [Screenshot Guide](docs/SCREENSHOT_GUIDE.md) before adding new media.
+
+</details>
+
+<details>
+<summary>Contributor path</summary>
+
+1. Read [CONTRIBUTING.md](CONTRIBUTING.md) for official contribution rules.
+2. Use [Contributor Guide](docs/CONTRIBUTOR_GUIDE.md) for quick onboarding.
+3. Run the checks described in [Testing Guide](TESTING.md).
+4. Keep PRs focused on the assigned issue.
+
+</details>
+
+---
+
+## Project Snapshot
+
+| Area             | Status                                                                   |
+| ---------------- | ------------------------------------------------------------------------ |
+| Primary platform | Chrome extension for Google Meet                                         |
+| Architecture     | Manifest V3, Vite, TypeScript                                            |
+| Privacy model    | Local-first, BYOK, no project-owned transcript storage                   |
+| Demo assets      | Workflow GIF, screenshot system, demo media guide                        |
+| Contributor docs | Setup, workflow, troubleshooting, screenshot, and PR guidance            |
+| Community        | GSSoC-ready issues, contribution guide, support and code of conduct docs |
 
 ---
 

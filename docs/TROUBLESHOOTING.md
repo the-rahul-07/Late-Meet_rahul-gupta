@@ -2,6 +2,17 @@
 
 Use this guide when the extension builds, loads, or runs differently than expected during local development.
 
+## Local Setup Troubleshooting
+
+| Problem                              | Recommended fix                                                                            |
+| ------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `npm install` fails                  | Confirm Node.js 18 or newer is installed, then retry from the project root.                |
+| `npm run build` fails                | Run `npm install`, check the terminal error, and confirm dependencies are installed.       |
+| `dist/` is not created               | Make sure the build command is running from the repository root.                           |
+| Chrome cannot load the extension     | Select the generated `dist/` folder, not `src/` or the repository root.                    |
+| Extension changes do not appear      | Rebuild with `npm run build`, reload the extension, and refresh the Google Meet tab.       |
+| Local docs screenshots look outdated | Re-capture only privacy-safe UI states and follow [Screenshot Guide](SCREENSHOT_GUIDE.md). |
+
 ## Extension Does Not Load in Chrome
 
 Check the following:
