@@ -25,7 +25,6 @@
 
 - [Product Preview](#product-preview)
 - [Documentation Hub](#documentation-hub)
-- [Interactive Documentation](#interactive-documentation)
 - [Project Snapshot](#project-snapshot)
 - [Getting Started](docs/GETTING_STARTED.md)
 - [Workflow Guide](docs/WORKFLOW.md)
@@ -128,40 +127,6 @@ The workflow preview covers extension loading, popup usage, Google Meet launch, 
 | [FAQ](FAQ.md)                                  | Read common product and setup questions.                                          |
 | [Glossary](GLOSSARY.md)                        | Understand project terms and extension concepts.                                  |
 | [Testing Guide](TESTING.md)                    | Run and understand local testing expectations.                                    |
-
----
-
-## Interactive Documentation
-
-<details>
-<summary>Quick start path</summary>
-
-1. Read [Getting Started](docs/GETTING_STARTED.md).
-2. Build the extension with `npm run build`.
-3. Load `dist/` from `chrome://extensions`.
-4. Configure provider keys with [API Key Setup](docs/API_KEYS.md).
-5. Follow the [Workflow Guide](docs/WORKFLOW.md).
-
-</details>
-
-<details>
-<summary>Demo and visual assets</summary>
-
-- Watch the workflow preview in [Demo Assets](docs/DEMO.md).
-- Review screenshots in [Product Preview](#product-preview).
-- Follow [Screenshot Guide](docs/SCREENSHOT_GUIDE.md) before adding new media.
-
-</details>
-
-<details>
-<summary>Contributor path</summary>
-
-1. Read [CONTRIBUTING.md](CONTRIBUTING.md) for official contribution rules.
-2. Use [Contributor Guide](docs/CONTRIBUTOR_GUIDE.md) for quick onboarding.
-3. Run the checks described in [Testing Guide](TESTING.md).
-4. Keep PRs focused on the assigned issue.
-
-</details>
 
 ---
 
@@ -338,7 +303,7 @@ The extension is built natively on Manifest V3 using **TypeScript and Vite 5** f
 We are extremely excited to welcome contributors from the **GirlScript Summer of Code (GSSoC) 2026** cohort! Late Meet is dedicated to fostering a supportive, premium, and structured open-source environment.
 
 > [!WARNING]
-> **Important Rule for GSSoC Contributes:**
+> **Important Rule for GSSoC Contributors:**
 >
 > - Please **Fork the repository** and create a feature branch (`git checkout -b feature/your-feature`) from your fork. Direct pushes to the main repo are blocked.
 > - Always request issue assignment by commenting on open issues before working on them.
@@ -374,9 +339,10 @@ Before making a commit, make sure your code aligns perfectly with our quality ch
 
 ## 🚀 Active & Open GSSoC 2026 Issues
 
-Here is the official bank of active and open issues currently available for GSSoC 2026 contributors. You can click on the issue link to claim it on GitHub!
+Here is the official bank of active and open issues currently available for GSSoC 2026 contributors. Click any issue link to claim it on GitHub!
 
-### 🟢 Beginner-Friendly Issues
+<details>
+<summary>🟢 Beginner-Friendly Issues — Level 1 (click to expand)</summary>
 
 | Issue #                                                   | Title                                                   | Focus / Scope                                                                      |
 | :-------------------------------------------------------- | :------------------------------------------------------ | :--------------------------------------------------------------------------------- |
@@ -391,7 +357,10 @@ Here is the official bank of active and open issues currently available for GSSo
 | [#98](https://github.com/shouri123/Late-Meet/issues/98)   | `Chore: Add .editorconfig coding styles`                | Add configuration for cross-IDE consistent indentation.                            |
 | [#73](https://github.com/shouri123/Late-Meet/issues/73)   | `Bug: Time Input Allows Invalid Past Selection`         | Validate date inputs to prevent past meeting scheduling.                           |
 
-### 🟡 Intermediate Issues
+</details>
+
+<details>
+<summary>🟡 Intermediate Issues — Level 2 (click to expand)</summary>
 
 | Issue #                                                   | Title                                             | Focus / Scope                                                          |
 | :-------------------------------------------------------- | :------------------------------------------------ | :--------------------------------------------------------------------- |
@@ -404,12 +373,17 @@ Here is the official bank of active and open issues currently available for GSSo
 | [#40](https://github.com/shouri123/Late-Meet/issues/40)   | `Context Menu Capturer for Tab Audio`             | Context menu action to trigger transcription of any browser tab.       |
 | [#11](https://github.com/shouri123/Late-Meet/issues/11)   | `Meeting Copilot Enhancements`                    | Templates, multi-language support, global commands.                    |
 
-### 🔴 Advanced Issues
+</details>
+
+<details>
+<summary>🔴 Advanced Issues — Level 3 (click to expand)</summary>
 
 | Issue #                                                   | Title                                              | Focus / Scope                                                   |
 | :-------------------------------------------------------- | :------------------------------------------------- | :-------------------------------------------------------------- |
 | [#109](https://github.com/shouri123/Late-Meet/issues/109) | `[PERF]: Lazy-load dashboard tab contents`         | Defer rendering of non-active tabs to reduce DOM overhead.      |
 | [#99](https://github.com/shouri123/Late-Meet/issues/99)   | `[FEATURE]: Speaker Confidence Collapse Detection` | Track linguistic certainty and identify unresolved discussions. |
+
+</details>
 
 ---
 
@@ -417,24 +391,39 @@ Here is the official bank of active and open issues currently available for GSSo
 
 ### Phase 1: Core Foundation ✅
 
+<details>
+<summary>View details</summary>
+
 - Native Google Meet integration without bot participants.
 - Real-time offline audio capture via Chrome Offscreen APIs.
 - Premium monochrome UI extension & side panel.
 - BYOK integration for processing.
 
+</details>
+
 ### Phase 2: Local & Privacy Overhaul ✅
+
+<details>
+<summary>View details</summary>
 
 - Strip Supabase/backend dependencies.
 - Local-first session management and storage.
 - ElevenLabs Scribe integration for superior transcription.
 - Intelligent rolling LLM context prompting.
 
+</details>
+
 ### Phase 3: Platform Expansion 🔄 _(Planned)_
+
+<details>
+<summary>View details</summary>
 
 - **Offline/Native Support:** Offline transcription via local Whisper / WebGPU.
 - **Smart Tracking:** Speaker diarization and action item assignee routing.
 - **Multi-Platform:** Zoom and Microsoft Teams support.
 - **On-the-fly Translation:** Bridging language gaps during international calls.
+
+</details>
 
 ---
 
