@@ -1,6 +1,7 @@
 import { State, Topic, TranscriptEntry, TimelineEvent, Decision, ActionItem } from "./types";
 import { initTheme } from "./theme.js";
 import { resolveManualMeetTab } from "./meetingTabs";
+import { startDashboardAudioCapture } from "./dashboardCapture";
 
 initTheme();
 
@@ -29,6 +30,8 @@ function normalizeActionItem(input: unknown): ActionItem | null {
     task,
     owner: String(raw.owner ?? "").trim() || undefined,
     deadline: String(raw.deadline ?? "").trim() || undefined,
+    confidence: (raw as any).confidence,
+    isSpeculative: (raw as any).isSpeculative,
   } as ActionItem;
 }
 
@@ -59,7 +62,6 @@ async function persistActionStatuses() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  await loadActionStatuses();
   // ——— Waveform Visualizer ———
   const WAVEFORM_N = 32;
   const WAVEFORM_H = 48;
@@ -119,8 +121,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   initWaveformCanvas();
 
+  try {
+    await startDashboardAudioCapture({
+      resolveMeetTab: resolveManualMeetTab,
+      getMediaStreamId: getDashboardMediaStreamId,
+      requestMicrophonePermission: requestDashboardMicrophonePermission,
+      startAudioCapture: (payload) =>
+        chrome.runtime.sendMessage({
+          type: "MANUAL_START_AUDIO",
+          ...payload,
+        }),
+    });
+
+    await loadActionStatuses();
+  } catch (error) {
+    console.error("Failed to initialize dashboard audio capture:", error);
+  }
+
   // ——— Tab Switching ———
-  const tabs = document.querySelectorAll(".dash-tab");
+  const tabs = document.querySelectorAll(".dash-tabs .dash-tab");
   const panels = document.querySelectorAll(".tab-panel");
   const loadedTabs = new Set<string>(["overview"]);
 
@@ -171,9 +190,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       const tabId = (tab as HTMLElement).dataset.tab;
       if (!tabId) return;
 
-      tabs.forEach((t) => t.classList.remove("active"));
+      tabs.forEach((t) => {
+        t.classList.remove("active");
+        t.setAttribute("aria-selected", "false");
+        t.setAttribute("tabindex", "-1");
+      });
       panels.forEach((p) => p.classList.remove("active"));
       (tab as HTMLElement).classList.add("active");
+      (tab as HTMLElement).setAttribute("aria-selected", "true");
+      (tab as HTMLElement).setAttribute("tabindex", "0");
 
       const panel = document.getElementById(`tab-${tabId}`);
       if (panel) {
@@ -191,8 +216,32 @@ document.addEventListener("DOMContentLoaded", async () => {
             updatePeople(lastState?.participants || [], lastState?.lateJoiners || []);
           else if (tabId === "timeline") updateTimeline(lastState?.timeline || []);
           else if (tabId === "transcript") updateTranscript(lastState?.transcript || []);
-          else if (tabId === "sessions") loadSavedSessions();
+          else if (tabId === "history" || tabId === "sessions") loadMeetingHistory();
         }, 150);
+      }
+    });
+
+    tab.addEventListener("keydown", (e: Event) => {
+      const kbEvent = e as KeyboardEvent;
+      let newIndex = -1;
+      const tabsArray = Array.from(tabs);
+      const index = tabsArray.indexOf(tab);
+
+      if (kbEvent.key === "ArrowRight") {
+        newIndex = (index + 1) % tabsArray.length;
+      } else if (kbEvent.key === "ArrowLeft") {
+        newIndex = (index - 1 + tabsArray.length) % tabsArray.length;
+      } else if (kbEvent.key === "Home") {
+        newIndex = 0;
+      } else if (kbEvent.key === "End") {
+        newIndex = tabsArray.length - 1;
+      }
+
+      if (newIndex !== -1) {
+        kbEvent.preventDefault();
+        const newTab = tabsArray[newIndex] as HTMLElement;
+        newTab.focus();
+        newTab.click();
       }
     });
   });
@@ -223,10 +272,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
     if (message.type === "SESSION_ENDED") {
+      // Reload history if on that tab
+      const historyTab = document.querySelector('[data-tab="history"]');
+      if (historyTab?.classList.contains("active")) {
+        loadMeetingHistory();
+      }
       // Reload sessions if on that tab
       const sessionsTab = document.querySelector('[data-tab="sessions"]');
       if (sessionsTab?.classList.contains("active")) {
-        loadSavedSessions();
+        loadMeetingHistory();
       } else {
         loadedTabs.delete("sessions");
       }
@@ -242,6 +296,31 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ——— Start Audio Capture (User Gesture via tabCapture) ———
   const audioBtn = document.getElementById("dash-start-audio-btn") as HTMLButtonElement | null;
+
+  function getDashboardMediaStreamId(tabId: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+      chrome.tabCapture.getMediaStreamId({ targetTabId: tabId }, (streamId) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message || "Unknown tab capture error"));
+          return;
+        }
+
+        resolve(streamId || "");
+      });
+    });
+  }
+
+  async function requestDashboardMicrophonePermission(): Promise<boolean> {
+    try {
+      const micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      micStream.getTracks().forEach((t) => t.stop());
+      return true;
+    } catch {
+      console.warn("[Dashboard] Mic permission not granted — waveform will use tab audio only");
+      return false;
+    }
+  }
+
   audioBtn?.addEventListener("click", async () => {
     if (lastState?.audioActive) {
       try {
@@ -259,68 +338,30 @@ document.addEventListener("DOMContentLoaded", async () => {
       audioBtn.disabled = true;
       audioBtn.textContent = "Starting...";
 
-      // Request mic permission from this user-facing page while the gesture is still live.
-      // Chrome grants the permission to the extension origin so the offscreen doc inherits it.
-      try {
-        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        micStream.getTracks().forEach((t) => t.stop());
-      } catch {
-        console.warn("[Dashboard] Mic permission not granted — waveform will use tab audio only");
+      const { meetingId } = await startDashboardAudioCapture({
+        resolveMeetTab: resolveManualMeetTab,
+        getMediaStreamId: getDashboardMediaStreamId,
+        requestMicrophonePermission: requestDashboardMicrophonePermission,
+        startAudioCapture: (payload) =>
+          chrome.runtime.sendMessage({
+            type: "MANUAL_START_AUDIO",
+            ...payload,
+          }),
+      });
+
+      setAudioBtnActive(true);
+      // Start timer immediately
+      startTimer(Date.now());
+      const statusText = document.getElementById("dash-status-text");
+      const statusDot = document.querySelector(".dash-status-dot");
+      if (statusText) statusText.textContent = `Meeting active — ${meetingId || "unknown"}`;
+      if (statusDot) statusDot.classList.add("active");
+    } catch (err: any) {
+      if ((err.message || "").includes("active stream")) {
+        setAudioBtnActive(true);
+        return;
       }
 
-      resolveManualMeetTab()
-        .then(({ tab: meetTab, meetingId, meetingUrl }) => {
-          // --- Get Media Stream ID in foreground (dashboard) to ensure user gesture propagation ---
-          chrome.tabCapture.getMediaStreamId({ targetTabId: meetTab.id }, async (streamId) => {
-            if (chrome.runtime.lastError) {
-              const err = chrome.runtime.lastError.message || "Unknown error";
-              console.error("[Dashboard] getMediaStreamId error:", err);
-              if (err.includes("active stream")) {
-                setAudioBtnActive(true);
-                return;
-              } else {
-                handleDashboardAudioError(
-                  new Error('Capture permission denied. Try clicking "Start Audio" again.'),
-                );
-                return;
-              }
-            }
-
-            if (!streamId) {
-              handleDashboardAudioError(
-                new Error('Capture permission denied. Try clicking "Start Audio" again.'),
-              );
-            }
-
-            try {
-              const response = await chrome.runtime.sendMessage({
-                type: "MANUAL_START_AUDIO",
-                tabId: meetTab.id,
-                meetingId: meetingId,
-                meetingUrl: meetingUrl || meetTab.url || null,
-                streamId: streamId,
-                includeMicrophone: true,
-              });
-
-              if (response && response.success) {
-                setAudioBtnActive(true);
-                // Start timer immediately
-                startTimer(Date.now());
-                const statusText = document.getElementById("dash-status-text");
-                const statusDot = document.querySelector(".dash-status-dot");
-                if (statusText)
-                  statusText.textContent = `Meeting active — ${meetingId || "unknown"}`;
-                if (statusDot) statusDot.classList.add("active");
-              } else {
-                throw new Error(response?.error || "Failed to start audio");
-              }
-            } catch (err: any) {
-              handleDashboardAudioError(err);
-            }
-          });
-        })
-        .catch(handleDashboardAudioError);
-    } catch (err: any) {
       handleDashboardAudioError(err);
     }
 
@@ -414,6 +455,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Key Insights
     updateInsights(state.keyInsights);
 
+    updateUnresolvedDiscussions(state.unresolvedDiscussions);
+    updateContradictions(state.contradictions);
+
     // Topics Tab
     if (loadedTabs.has("topics")) updateTopics(state.topics);
 
@@ -452,7 +496,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ——— Key Insights ———
-  function updateInsights(insights: string[]) {
+  function updateInsights(insights: any[]) {
     const list = document.getElementById("dash-insights-list");
     if (!list) return;
     if (!insights || insights.length === 0) {
@@ -460,7 +504,55 @@ document.addEventListener("DOMContentLoaded", async () => {
         '<li class="empty-msg">Insights will appear as the conversation progresses</li>';
       return;
     }
-    list.innerHTML = insights.map((i) => `<li>${escapeHtml(i || "")}</li>`).join("");
+    list.innerHTML = insights
+      .filter((i) => i != null)
+      .map((i) => {
+        const text = typeof i === "string" ? i : i.text || "";
+        const rawScore =
+          typeof i === "object" && i !== null
+            ? (i as { confidenceScore?: unknown }).confidenceScore
+            : undefined;
+        const parsedScore = typeof rawScore === "number" ? rawScore : Number(rawScore);
+        const safeScore = Number.isFinite(parsedScore)
+          ? Math.max(0, Math.min(100, parsedScore))
+          : null;
+        const score =
+          safeScore !== null
+            ? ` <span style="font-size: 11px; color: #9ca3af;">(Conf: ${safeScore}%)</span>`
+            : "";
+        return `<li>${escapeHtml(text)}${score}</li>`;
+      })
+      .join("");
+  }
+
+  function updateUnresolvedDiscussions(discussions: string[]) {
+    const list = document.getElementById("dash-unresolved-list");
+    if (!list) return;
+    if (!discussions || discussions.length === 0) {
+      list.innerHTML = '<li class="empty-msg">No unresolved discussions yet</li>';
+      return;
+    }
+    list.innerHTML = discussions.map((d) => `<li>${escapeHtml(d || "")}</li>`).join("");
+  }
+
+  function updateContradictions(contradictions: any[]) {
+    const list = document.getElementById("dash-contradictions-list");
+    if (!list) return;
+    if (!contradictions || contradictions.length === 0) {
+      list.innerHTML = '<li class="empty-msg">No contradictions detected</li>';
+      return;
+    }
+    list.innerHTML = contradictions
+      .filter((c) => c != null)
+      .map((c) => {
+        const issue = typeof c === "string" ? c : c.issue || "";
+        const persists =
+          typeof c === "object" && c.persists
+            ? ` <span style="font-size: 11px; background: #FEE2E2; color: #DC2626; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">Persists</span>`
+            : "";
+        return `<li>${escapeHtml(issue)}${persists}</li>`;
+      })
+      .join("");
   }
 
   // ——— Topics ———
@@ -499,7 +591,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       .map(
         (d) => `
       <div class="decision-item">
-        <div class="decision-text">${escapeHtml(d.text || "")}</div>
+        <div class="decision-text">${escapeHtml(d.text || "")} ${d.classification === "tentative" ? '<span style="font-size: 11px; background: #FEF3C7; color: #D97706; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">Tentative</span>' : ""}</div>
         <div class="decision-meta">${d.by ? `By ${escapeHtml(d.by)}` : ""} ${d.timestamp ? `• ${escapeHtml(d.timestamp)}` : ""}</div>
       </div>
     `,
@@ -546,6 +638,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       const taskDiv = document.createElement("div");
       taskDiv.className = "action-task" + (done ? " action-task--done" : "");
       taskDiv.textContent = task;
+      if (a.isSpeculative) {
+        const specSpan = document.createElement("span");
+        specSpan.style.cssText =
+          "font-size: 11px; background: #FEE2E2; color: #DC2626; padding: 2px 6px; border-radius: 4px; margin-left: 6px;";
+        specSpan.textContent = "Speculative";
+        taskDiv.appendChild(specSpan);
+      }
+      if (a.confidence && a.confidence !== "high") {
+        const confSpan = document.createElement("span");
+        confSpan.style.cssText =
+          "font-size: 11px; background: #F3F4F6; color: #6B7280; padding: 2px 6px; border-radius: 4px; margin-left: 6px;";
+        confSpan.textContent = `Conf: ${a.confidence}`;
+        taskDiv.appendChild(confSpan);
+      }
       label.appendChild(taskDiv);
 
       if (owner) {
@@ -807,7 +913,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     md += `## Key Insights\n`;
     if (state.keyInsights?.length) {
-      state.keyInsights.forEach((i: string) => (md += `- ${i}\n`));
+      state.keyInsights.forEach((insight) => {
+        md += `- ${insight}\n`;
+      });
       md += "\n";
     } else {
       md += `_No insights available_\n\n`;
@@ -950,7 +1058,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function sanitizeTopicStatus(status: string) {
-    return status === "completed" ? "completed" : "active";
+    if (status === "completed") return "completed";
+    if (status === "unresolved") return "unresolved";
+    return "active";
   }
 
   function formatDuration(seconds: number) {
@@ -960,15 +1070,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   }
 
-  // ——— Saved Sessions Tab ———
-  async function loadSavedSessions() {
+  // ——— Meeting History Tab ———
+  let sessionToDelete: string | null = null;
+
+  async function loadMeetingHistory() {
     try {
       const sessions: State[] = await chrome.runtime.sendMessage({ type: "GET_SAVED_SESSIONS" });
-      const container = document.getElementById("dash-sessions-list");
+      const container = document.getElementById("dash-history-list");
       if (!container) return;
       if (!sessions || sessions.length === 0) {
         container.innerHTML =
-          '<div class="empty-msg">No saved sessions yet. Sessions are saved when you end a meeting and click "Save".</div>';
+          '<div class="empty-msg">No history exists yet. Sessions are saved when you end a meeting and click "Save".</div>';
         return;
       }
 
@@ -991,13 +1103,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             <div class="session-item-header">
               <div>
                 <div class="session-item-date">${escapeHtml(date)} at ${escapeHtml(time)}</div>
-                <div class="session-item-id">${escapeHtml(s.meetingId || "Unknown Meeting")}</div>
+                <div class="session-item-id" title="${escapeHtml(s.meetingUrl || "")}">${escapeHtml(s.meetingUrl || s.meetingId || "Unknown Meeting")}</div>
               </div>
               <div class="session-item-meta">
                 <span>${formatDuration(s.duration || 0)}</span>
               </div>
             </div>
-            <div class="session-item-summary">${escapeHtml(s.summary || "No summary available")}</div>
+            <div class="session-item-summary" style="cursor: pointer;" title="Click to expand/collapse summary">${escapeHtml(s.summary || "No summary available")}</div>
             <div class="session-item-stats">
               <span>${topicCount} topics</span>
               <span>${decisionCount} decisions</span>
@@ -1043,18 +1155,42 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // Wire up delete buttons
       container.querySelectorAll<HTMLButtonElement>(".session-delete-btn").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const sessionId = btn.dataset.sessionId;
-          if (sessionId) {
-            await chrome.runtime.sendMessage({ type: "DELETE_SAVED_SESSION", sessionId });
-            loadSavedSessions();
+        btn.addEventListener("click", () => {
+          sessionToDelete = btn.dataset.sessionId || null;
+          if (sessionToDelete) {
+            document.getElementById("delete-confirm-modal")?.classList.remove("hidden");
           }
         });
       });
+
+      // Wire up summary expand/collapse
+      container.querySelectorAll<HTMLDivElement>(".session-item-summary").forEach((summary) => {
+        summary.addEventListener("click", () => {
+          const item = summary.closest(".session-item");
+          if (item) item.classList.toggle("expanded");
+        });
+      });
     } catch (err) {
-      console.error("[Dashboard] Failed to load sessions:", err);
+      console.error("[Dashboard] Failed to load history:", err);
     }
   }
+
+  // Modal logic
+  document.getElementById("cancel-delete-btn")?.addEventListener("click", () => {
+    sessionToDelete = null;
+    document.getElementById("delete-confirm-modal")?.classList.add("hidden");
+  });
+  document.getElementById("confirm-delete-btn")?.addEventListener("click", async () => {
+    if (sessionToDelete) {
+      await chrome.runtime.sendMessage({
+        type: "DELETE_SAVED_SESSION",
+        sessionId: sessionToDelete,
+      });
+      sessionToDelete = null;
+      document.getElementById("delete-confirm-modal")?.classList.add("hidden");
+      loadMeetingHistory();
+    }
+  });
 
   function generateSessionMarkdown(session: State): string {
     let md = `# Meeting Summary\n\n`;
@@ -1117,5 +1253,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     showToast("Downloaded as .md file", "success");
   }
 
+  // Load history on tab switch
+  document.querySelector('[data-tab="history"]')?.addEventListener("click", loadMeetingHistory);
   // Session loading is handled in the tab click listener now
 });
