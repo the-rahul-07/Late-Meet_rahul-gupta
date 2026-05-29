@@ -1,6 +1,7 @@
 import { State, Topic, TranscriptEntry, TimelineEvent, Decision, ActionItem } from "./types";
 import { initTheme } from "./theme.js";
 import { resolveManualMeetTab } from "./meetingTabs";
+import { startDashboardAudioCapture } from "./dashboardCapture";
 
 initTheme();
 
@@ -178,6 +179,31 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ——— Start Audio Capture (User Gesture via tabCapture) ———
   const audioBtn = document.getElementById("dash-start-audio-btn") as HTMLButtonElement | null;
+
+  function getDashboardMediaStreamId(tabId: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+      chrome.tabCapture.getMediaStreamId({ targetTabId: tabId }, (streamId) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message || "Unknown tab capture error"));
+          return;
+        }
+
+        resolve(streamId || "");
+      });
+    });
+  }
+
+  async function requestDashboardMicrophonePermission(): Promise<boolean> {
+    try {
+      const micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      micStream.getTracks().forEach((t) => t.stop());
+      return true;
+    } catch {
+      console.warn("[Dashboard] Mic permission not granted — waveform will use tab audio only");
+      return false;
+    }
+  }
+
   audioBtn?.addEventListener("click", async () => {
     if (lastState?.audioActive) {
       try {
@@ -195,68 +221,30 @@ document.addEventListener("DOMContentLoaded", async () => {
       audioBtn.disabled = true;
       audioBtn.textContent = "Starting...";
 
-      // Request mic permission from this user-facing page while the gesture is still live.
-      // Chrome grants the permission to the extension origin so the offscreen doc inherits it.
-      try {
-        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        micStream.getTracks().forEach((t) => t.stop());
-      } catch {
-        console.warn("[Dashboard] Mic permission not granted — waveform will use tab audio only");
+      const { meetingId } = await startDashboardAudioCapture({
+        resolveMeetTab: resolveManualMeetTab,
+        getMediaStreamId: getDashboardMediaStreamId,
+        requestMicrophonePermission: requestDashboardMicrophonePermission,
+        startAudioCapture: (payload) =>
+          chrome.runtime.sendMessage({
+            type: "MANUAL_START_AUDIO",
+            ...payload,
+          }),
+      });
+
+      setAudioBtnActive(true);
+      // Start timer immediately
+      startTimer(Date.now());
+      const statusText = document.getElementById("dash-status-text");
+      const statusDot = document.querySelector(".dash-status-dot");
+      if (statusText) statusText.textContent = `Meeting active — ${meetingId || "unknown"}`;
+      if (statusDot) statusDot.classList.add("active");
+    } catch (err: any) {
+      if ((err.message || "").includes("active stream")) {
+        setAudioBtnActive(true);
+        return;
       }
 
-      resolveManualMeetTab()
-        .then(({ tab: meetTab, meetingId, meetingUrl }) => {
-          // --- Get Media Stream ID in foreground (dashboard) to ensure user gesture propagation ---
-          chrome.tabCapture.getMediaStreamId({ targetTabId: meetTab.id }, async (streamId) => {
-            if (chrome.runtime.lastError) {
-              const err = chrome.runtime.lastError.message || "Unknown error";
-              console.error("[Dashboard] getMediaStreamId error:", err);
-              if (err.includes("active stream")) {
-                setAudioBtnActive(true);
-                return;
-              } else {
-                handleDashboardAudioError(
-                  new Error('Capture permission denied. Try clicking "Start Audio" again.'),
-                );
-                return;
-              }
-            }
-
-            if (!streamId) {
-              handleDashboardAudioError(
-                new Error('Capture permission denied. Try clicking "Start Audio" again.'),
-              );
-            }
-
-            try {
-              const response = await chrome.runtime.sendMessage({
-                type: "MANUAL_START_AUDIO",
-                tabId: meetTab.id,
-                meetingId: meetingId,
-                meetingUrl: meetingUrl || meetTab.url || null,
-                streamId: streamId,
-                includeMicrophone: true,
-              });
-
-              if (response && response.success) {
-                setAudioBtnActive(true);
-                // Start timer immediately
-                startTimer(Date.now());
-                const statusText = document.getElementById("dash-status-text");
-                const statusDot = document.querySelector(".dash-status-dot");
-                if (statusText)
-                  statusText.textContent = `Meeting active — ${meetingId || "unknown"}`;
-                if (statusDot) statusDot.classList.add("active");
-              } else {
-                throw new Error(response?.error || "Failed to start audio");
-              }
-            } catch (err: any) {
-              handleDashboardAudioError(err);
-            }
-          });
-        })
-        .catch(handleDashboardAudioError);
-    } catch (err: any) {
       handleDashboardAudioError(err);
     }
 
