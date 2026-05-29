@@ -4,6 +4,11 @@ Late Meet is a **Manifest V3 Chrome Extension** built with TypeScript and Vite 5
 
 ## High-Level Overview
 
+![Late Meet Architecture](assets/architecture.svg)
+
+> 🖱️ [Open interactive diagram →](https://htmlpreview.github.io/?https://github.com/shouri123/Late-Meet/blob/main/docs/assets/architecture.html)
+
+<!--
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    Google Meet Tab                       │
@@ -52,7 +57,7 @@ Late Meet is a **Manifest V3 Chrome Extension** built with TypeScript and Vite 5
                                   │  • Sentiment     │
                                   │  • Timeline      │
                                   └──────────────────┘
-```
+``` -->
 
 ## Core Components
 
