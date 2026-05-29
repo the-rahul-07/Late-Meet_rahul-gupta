@@ -19,6 +19,20 @@
 
 ---
 
+## Quick Navigation
+
+- [Product Preview](#product-preview)
+- [Features](#-key-features)
+- [Installation](#%EF%B8%8F-installation--developer-setup)
+- [Configuration](#%EF%B8%8F-installation--developer-setup)
+- [Architecture](docs/ARCHITECTURE.md)
+- [FAQ](FAQ.md)
+- [Glossary](GLOSSARY.md)
+- [Testing Guide](TESTING.md)
+- [Contributing](CONTRIBUTING.md)
+
+---
+
 > [!IMPORTANT]
 > **Repository Scope Notice:** The website linked in this project's metadata is **not** part of this repository.
 >
@@ -57,6 +71,20 @@ Joining a meeting late or losing focus for a moment leaves participants disconne
 **Late Meet** lives entirely natively within your browser. Without adding any disruptive bots to the call, it securely captures audio directly from the Chrome tab. It leverages **ElevenLabs' Scribe API** for state-of-the-art multilingual transcription and **OpenAI GPT models** for intelligent summarization, presenting a stunning, high-performance side-panel dashboard.
 
 We designed this with a **local-first philosophy**: all meeting data is processed locally using `chrome.storage.local` during the session, and you only need your own API keys. No external databases. No user tracking.
+
+---
+
+## Product Preview
+
+Late Meet brings an AI copilot directly into Google Meet, with a focused popup, configurable provider settings, an in-meeting Start Copilot overlay, and a side panel dashboard for live meeting intelligence.
+
+| Extension Popup                                                 | Options & API Setup                                            |
+| --------------------------------------------------------------- | -------------------------------------------------------------- |
+| ![Late Meet extension popup](docs/assets/screenshots/popup.png) | ![Late Meet options page](docs/assets/screenshots/options.png) |
+
+| Google Meet Overlay                                                                               | Meeting Intelligence Side Panel                                                     |
+| ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| ![Late Meet Start Copilot overlay in Google Meet](docs/assets/screenshots/meet-start-copilot.png) | ![Late Meet side panel dashboard](docs/assets/screenshots/dashboard-side-panel.png) |
 
 ---
 
@@ -191,6 +219,11 @@ The extension is built natively on Manifest V3 using **TypeScript and Vite 5** f
    - Open Chrome and navigate to `chrome://extensions/`.
    - Enable **Developer mode** (toggle in the top-right corner).
    - Click **Load unpacked** in the top-left and select the **`dist/`** folder (NOT the root or `src/` folder).
+
+   After loading the `dist/` folder, Late Meet should appear in `chrome://extensions`:
+
+   ![Late Meet loaded in Chrome extensions](docs/assets/screenshots/extension-loaded.png)
+
 5. **Configure Options:**
    - Click the extension icon in the toolbar, open the **Options** menu.
    - Enter your **ElevenLabs API Key** and **OpenAI API Key** (Bring Your Own Key model).
