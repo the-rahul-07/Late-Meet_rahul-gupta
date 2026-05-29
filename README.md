@@ -22,6 +22,15 @@
 ## Quick Navigation
 
 - [Product Preview](#product-preview)
+- [Documentation Hub](#documentation-hub)
+- [Getting Started](docs/GETTING_STARTED.md)
+- [Workflow Guide](docs/WORKFLOW.md)
+- [Demo Assets](docs/DEMO.md)
+- [API Key Setup](docs/API_KEYS.md)
+- [Privacy](docs/PRIVACY.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Screenshot Guide](docs/SCREENSHOT_GUIDE.md)
+- [Contributor Guide](docs/CONTRIBUTOR_GUIDE.md)
 - [Features](#-key-features)
 - [Installation](#%EF%B8%8F-installation--developer-setup)
 - [Configuration](#%EF%B8%8F-installation--developer-setup)
@@ -85,6 +94,35 @@ Late Meet brings an AI copilot directly into Google Meet, with a focused popup, 
 | Google Meet Overlay                                                                               | Meeting Intelligence Side Panel                                                     |
 | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | ![Late Meet Start Copilot overlay in Google Meet](docs/assets/screenshots/meet-start-copilot.png) | ![Late Meet side panel dashboard](docs/assets/screenshots/dashboard-side-panel.png) |
+
+---
+
+## Workflow Demo
+
+Demo media is tracked in [docs/DEMO.md](docs/DEMO.md).
+
+The workflow preview covers extension loading, popup usage, Google Meet launch, Copilot overlay startup, and the side panel dashboard.
+
+![Late Meet workflow demo](docs/assets/demo/late-meet-workflow.gif)
+
+---
+
+## Documentation Hub
+
+| Guide                                          | Purpose                                                                           |
+| ---------------------------------------------- | --------------------------------------------------------------------------------- |
+| [Getting Started](docs/GETTING_STARTED.md)     | Install, configure, and run Late Meet for the first time.                         |
+| [Workflow Guide](docs/WORKFLOW.md)             | Follow the complete product journey from extension loading to dashboard review.   |
+| [Demo Assets](docs/DEMO.md)                    | Track workflow videos, short GIFs, walkthroughs, and feature showcase animations. |
+| [API Key Setup](docs/API_KEYS.md)              | Configure ElevenLabs and OpenAI keys safely.                                      |
+| [Privacy](docs/PRIVACY.md)                     | Understand Late Meet's local-first and BYOK privacy model.                        |
+| [Troubleshooting](docs/TROUBLESHOOTING.md)     | Debug common setup, build, runtime, and provider issues.                          |
+| [Screenshot Guide](docs/SCREENSHOT_GUIDE.md)   | Capture consistent, privacy-safe documentation screenshots.                       |
+| [Contributor Guide](docs/CONTRIBUTOR_GUIDE.md) | Follow the contribution workflow for docs and extension changes.                  |
+| [Architecture](docs/ARCHITECTURE.md)           | Explore the Manifest V3 architecture and internal data flow.                      |
+| [FAQ](FAQ.md)                                  | Read common product and setup questions.                                          |
+| [Glossary](GLOSSARY.md)                        | Understand project terms and extension concepts.                                  |
+| [Testing Guide](TESTING.md)                    | Run and understand local testing expectations.                                    |
 
 ---
 
