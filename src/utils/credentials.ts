@@ -237,21 +237,15 @@ export async function saveApiCredentials(credentials: ApiCredentials): Promise<v
     }
   }
 
-  const operations: Promise<unknown>[] = [];
-
   if (Object.keys(saveData).length > 0) {
-    operations.push(chrome.storage.session.set(saveData));
-
     const encrypted = markEncrypted(await encryptCredentials(saveData));
-    operations.push(chrome.storage.local.set(encrypted));
+    await Promise.all([chrome.storage.session.set(saveData), chrome.storage.local.set(encrypted)]);
   }
 
   if (removeKeys.length > 0) {
-    operations.push(
+    await Promise.all([
       chrome.storage.session.remove(removeKeys),
       chrome.storage.local.remove(removeKeys),
-    );
+    ]);
   }
-
-  await Promise.all(operations);
 }
