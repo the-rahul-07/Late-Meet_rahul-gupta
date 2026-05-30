@@ -842,7 +842,7 @@ async function generateLateJoinerMessage(joinerName: string) {
     const apiKey = await getApiKey();
     if (!apiKey) return fallback;
 
-    const prompt = `A participant named ${safeJoinerName} joined late. Meeting duration: ${Math.round(context.duration / 60)} minutes. Current topic: ${sanitizePromptText(context.currentTopic || [...]
+const prompt = `A participant named ${safeJoinerName} joined late. Meeting duration: ${Math.round(context.duration / 60)} minutes. Current topic: ${sanitizePromptText(context.currentTopic || "project updates")}. Share a warm, concise catch-up message with key context and any confirmed decisions/action items.`;
 
     return await apiQueue.enqueue("late-joiner-message", async () => {
       const response = await fetch(OPENAI_CHAT_URL, {
