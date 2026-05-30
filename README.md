@@ -160,6 +160,8 @@ The extension is built natively on Manifest V3 using **TypeScript and Vite 5** f
 
 ![Late Meet Architecture](docs/assets/diagrams/architecture.svg)
 
+<!-- TODO: update htmlpreview URL to main branch after merge -->
+
 [![Open Interactive Diagram](https://img.shields.io/badge/Open%20Interactive%20Diagram-Click%20Here-coral?style=for-the-badge&logo=googlechrome)](https://htmlpreview.github.io/?https://github.com/the-rahul-07/Late-Meet_rahul-gupta/blob/docs/premium-documentation-experience/docs/assets/diagrams/architecture.html)
 
 1. **`background.ts` (The Conductor):** Acts as the central state manager. It detects Meet tabs, routes audio chunks to ElevenLabs for transcription, and coordinates intelligence queries with OpenAI.
