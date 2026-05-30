@@ -16,7 +16,7 @@
 </div>
 
 <div align="center">
-  <img src="docs/dashboard_preview.png" alt="Late Meet Dashboard Preview" width="800" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.25);" />
+  <img src="docs/assets/screenshots/dashboard_preview.png" alt="Late Meet Dashboard Preview" width="800" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.25);" />
 </div>
 
 ---
@@ -158,55 +158,9 @@ The workflow preview covers extension loading, popup usage, Google Meet launch, 
 
 The extension is built natively on Manifest V3 using **TypeScript and Vite 5** for a modern, optimized build process.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Google Meet Tab                      │
-│                  (meet.google.com)                      │
-└──────────────┬──────────────────────────────────────────┘
-               │ Audio stream via chrome.tabCapture
-               ▼
-┌──────────────────────────┐    ┌─────────────────────────┐
-│   Offscreen Document     │    │    Content Script       │
-│   (offscreen.ts)         │    │    (content.ts)         │
-│                          │    │                         │
-│  • Audio chunk capture   │    │  • Floating UI buttons  │
-│  • MediaRecorder API     │    │  • Late-joiner overlays │
-│  • Stream processing     │    │  • Chat automation      │
-└──────────┬───────────────┘    └──────────┬──────────────┘
-           │ Audio blobs                   │ UI events
-           ▼                               ▼
-┌─────────────────────────────────────────────────────────┐
-│              Background Service Worker                  │
-│              (background.ts — The Conductor)            │
-│                                                         │
-│  • Central state manager        • Meeting detection     │
-│  • Audio routing to STT APIs    • Participant tracking  │
-│  • LLM summarization calls      • Late-joiner briefings │
-│  • Session lifecycle mgmt       • Message coordination  │
-└──────┬───────────────┬──────────────────┬───────────────┘
-       │               │                  │
-       ▼               ▼                  ▼
-┌──────────┐   ┌──────────────┐   ┌──────────────────────┐
-│ElevenLabs│   │   OpenAI     │   │ chrome.storage.local │
-│ Scribe   │   │   GPT API    │   │                      │
-│ STT API  │   │              │   │  • Transcripts       │
-│          │   │  • Summaries │   │  • Summaries         │
-│ Fallback:│   │  • Insights  │   │  • Action items      │
-│ Whisper  │   │  • Actions   │   │  • API keys          │
-└──────────┘   └──────────────┘   └──────────────────────┘
-                                              │
-                                              ▼
-                                      ┌──────────────────┐
-                                      │  Side Panel UI   │
-                                      │  (dashboard.ts)  │
-                                      │                  │
-                                      │  • Live summary  │
-                                      │  • Topics        │
-                                      │  • Action items  │
-                                      │  • Sentiment     │
-                                      │  • Timeline      │
-                                      └──────────────────┘
-```
+![Late Meet Architecture](docs/assets/diagrams/architecture.svg)
+
+[![Open Interactive Diagram](https://img.shields.io/badge/Open%20Interactive%20Diagram-Click%20Here-coral?style=for-the-badge&logo=googlechrome)](https://htmlpreview.github.io/?https://github.com/the-rahul-07/Late-Meet_rahul-gupta/blob/docs/premium-documentation-experience/docs/assets/diagrams/architecture.html)
 
 1. **`background.ts` (The Conductor):** Acts as the central state manager. It detects Meet tabs, routes audio chunks to ElevenLabs for transcription, and coordinates intelligence queries with OpenAI.
 2. **`offscreen.html` & `offscreen.ts` (The Audio Engine):** Runs a hidden offscreen document for `chrome.tabCapture`. It processes audio in chunks, ensuring zero data loss and handling raw media streams.
