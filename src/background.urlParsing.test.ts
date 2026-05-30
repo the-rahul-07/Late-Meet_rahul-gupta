@@ -56,7 +56,7 @@ function installChromeMock(options: MockChromeOptions = {}) {
   (globalThis as Record<string, unknown>).chrome = {
     runtime: {
       getURL: (path: string) => `chrome-extension://fakeextid/${path}`,
-
+      sendMessage: async (msg: { type: string; state?: Record<string, unknown> }) => {
         sentMessages.push(msg);
       },
       getContexts: async () => [],
@@ -251,11 +251,7 @@ test("onUpdated: meets that lack a path segment do not start meeting", async () 
   resetMessages();
 
   // URL like https://meet.google.com/ has pathname "/" which won't match /^\/([a-z\-]+)/
-  await listeners.onUpdated!(
-    15,
-    { status: "complete" },
-    makeTab("https://meet.google.com/", 15),
-  );
+  await listeners.onUpdated!(15, { status: "complete" }, makeTab("https://meet.google.com/", 15));
 
   assert.equal(lastStateUpdate(), null, "Root path should not trigger meeting start");
 });
@@ -364,12 +360,11 @@ test("onActivated: chrome.tabs.get rejection is caught and does not propagate", 
   await ensureLoaded();
   resetMessages();
 
-  // Temporarily override chrome.tabs.get to throw
-  const originalGet = (globalThis as Record<string, unknown>).chrome;
-  (globalThis as Record<string, unknown>).chrome = {
-    ...(globalThis as Record<string, { tabs: Record<string, unknown> }>).chrome,
+  const originalGet = (globalThis as any).chrome;
+  (globalThis as any).chrome = {
+    ...(globalThis as any).chrome,
     tabs: {
-      ...(globalThis as Record<string, { tabs: Record<string, unknown> }>).chrome.tabs,
+      ...(globalThis as any).chrome.tabs,
       get: async () => {
         throw new Error("Tab not found");
       },

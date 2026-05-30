@@ -1157,7 +1157,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   try {
     const parsed = new URL(tab.url);
     if (parsed.hostname !== "meet.google.com") return;
-    const pathMatch = parsed.pathname.match(/^\/([a-z\-]+)/);
+    const pathMatch = /^\/([a-z-]+)/.exec(parsed.pathname);
     const meetingId = pathMatch ? pathMatch[1] : null;
     if (meetingId && meetingId !== "new") {
       if (!state.isActive) {
@@ -1182,7 +1182,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     if (!tab.url) return;
     const parsed = new URL(tab.url);
     if (parsed.hostname !== "meet.google.com") return;
-    const pathMatch = parsed.pathname.match(/^\/([a-z\-]+)/);
+    const pathMatch = /^\/([a-z-]+)/.exec(parsed.pathname);
     const meetingId = pathMatch ? pathMatch[1] : null;
     if (meetingId && meetingId !== "new" && !state.isActive) {
       state.meetingId = meetingId;
