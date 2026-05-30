@@ -8,7 +8,7 @@ Late Meet is a **Manifest V3 Chrome Extension** built with TypeScript and Vite 5
 
 <!-- TODO: update htmlpreview URL to main branch after merge -->
 
-[![Open Interactive Diagram](https://img.shields.io/badge/Open%20Interactive%20Diagram-Click%20Here-coral?style=for-the-badge&logo=googlechrome)](https://htmlpreview.github.io/?https://github.com/the-rahul-07/Late-Meet_rahul-gupta/blob/docs/premium-documentation-experience/docs/assets/diagrams/architecture.html)
+[![Open Interactive Diagram](https://img.shields.io/badge/Open%20Interactive%20Diagram-Click%20Here-coral?style=for-the-badge&logo=googlechrome)](https://htmlpreview.github.io/?https://github.com/shouri123/Late-Meet/blob/main/docs/assets/diagrams/architecture.html)
 
 ## Core Components
 

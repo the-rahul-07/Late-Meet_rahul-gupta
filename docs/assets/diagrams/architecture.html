@@ -305,7 +305,14 @@
         </defs>
 
         <!-- Google Meet Tab -->
-        <g class="node c-teal" onclick="showInfo('google-meet')">
+        <g
+          class="node c-teal"
+          onclick="showInfo('google-meet')"
+          tabindex="0"
+          role="button"
+          aria-label="Google Meet tab"
+          onkeydown="if (event.key === 'Enter' || event.key === ' ') showInfo('google-meet');"
+        >
           <rect x="190" y="30" width="300" height="56" rx="10" stroke-width="0.5" />
           <text class="th" x="340" y="52" text-anchor="middle" dominant-baseline="central">
             Google Meet tab
@@ -339,7 +346,14 @@
         <text class="ts" x="449" y="120" text-anchor="middle">UI events</text>
 
         <!-- Offscreen Document -->
-        <g class="node c-purple" onclick="showInfo('offscreen')">
+        <g
+          class="node c-purple"
+          onclick="showInfo('offscreen')"
+          tabindex="0"
+          role="button"
+          aria-label="Offscreen document"
+          onkeydown="if (event.key === 'Enter' || event.key === ' ') showInfo('offscreen');"
+        >
           <rect x="50" y="140" width="240" height="68" rx="10" stroke-width="0.5" />
           <text class="th" x="170" y="162" text-anchor="middle" dominant-baseline="central">
             Offscreen document
@@ -353,7 +367,14 @@
         </g>
 
         <!-- Content Script -->
-        <g class="node c-gray" onclick="showInfo('content')">
+        <g
+          class="node c-gray"
+          onclick="showInfo('content')"
+          tabindex="0"
+          role="button"
+          aria-label="Content script"
+          onkeydown="if (event.key === 'Enter' || event.key === ' ') showInfo('content');"
+        >
           <rect x="390" y="140" width="240" height="68" rx="10" stroke-width="0.5" />
           <text class="th" x="510" y="162" text-anchor="middle" dominant-baseline="central">
             Content script
@@ -390,7 +411,14 @@
         <text class="ts" x="483" y="258" text-anchor="middle">messages</text>
 
         <!-- Background Service Worker -->
-        <g class="node c-coral" onclick="showInfo('background')">
+        <g
+          class="node c-coral"
+          onclick="showInfo('background')"
+          tabindex="0"
+          role="button"
+          aria-label="Background service worker"
+          onkeydown="if (event.key === 'Enter' || event.key === ' ') showInfo('background');"
+        >
           <rect x="120" y="284" width="440" height="90" rx="10" stroke-width="0.5" />
           <text class="th" x="340" y="308" text-anchor="middle" dominant-baseline="central">
             Background service worker
@@ -449,7 +477,14 @@
         <text class="ts" x="534" y="430" text-anchor="middle">read/write</text>
 
         <!-- ElevenLabs -->
-        <g class="node c-blue" onclick="showInfo('elevenlabs')">
+        <g
+          class="node c-blue"
+          onclick="showInfo('elevenlabs')"
+          tabindex="0"
+          role="button"
+          aria-label="ElevenLabs Scribe"
+          onkeydown="if (event.key === 'Enter' || event.key === ' ') showInfo('elevenlabs');"
+        >
           <rect x="44" y="456" width="172" height="68" rx="10" stroke-width="0.5" />
           <text class="th" x="130" y="478" text-anchor="middle" dominant-baseline="central">
             ElevenLabs Scribe
@@ -463,7 +498,14 @@
         </g>
 
         <!-- OpenAI -->
-        <g class="node c-amber" onclick="showInfo('openai')">
+        <g
+          class="node c-amber"
+          onclick="showInfo('openai')"
+          tabindex="0"
+          role="button"
+          aria-label="OpenAI GPT"
+          onkeydown="if (event.key === 'Enter' || event.key === ' ') showInfo('openai');"
+        >
           <rect x="254" y="456" width="172" height="68" rx="10" stroke-width="0.5" />
           <text class="th" x="340" y="478" text-anchor="middle" dominant-baseline="central">
             OpenAI GPT
@@ -477,7 +519,14 @@
         </g>
 
         <!-- Storage -->
-        <g class="node c-gray" onclick="showInfo('storage')">
+        <g
+          class="node c-gray"
+          onclick="showInfo('storage')"
+          tabindex="0"
+          role="button"
+          aria-label="chrome.storage.local"
+          onkeydown="if (event.key === 'Enter' || event.key === ' ') showInfo('storage');"
+        >
           <rect x="464" y="456" width="172" height="68" rx="10" stroke-width="0.5" />
           <text class="th" x="550" y="478" text-anchor="middle" dominant-baseline="central">
             chrome.storage.local
@@ -543,7 +592,14 @@
         />
 
         <!-- Dashboard -->
-        <g class="node c-teal" onclick="showInfo('dashboard')">
+        <g
+          class="node c-teal"
+          onclick="showInfo('dashboard')"
+          tabindex="0"
+          role="button"
+          aria-label="Side panel dashboard"
+          onkeydown="if (event.key === 'Enter' || event.key === ' ') showInfo('dashboard');"
+        >
           <rect x="170" y="596" width="380" height="90" rx="10" stroke-width="0.5" />
           <text class="th" x="360" y="618" text-anchor="middle" dominant-baseline="central">
             Side panel dashboard
@@ -568,7 +624,14 @@
         </g>
 
         <!-- Popup -->
-        <g class="node c-purple" onclick="showInfo('popup')">
+        <g
+          class="node c-purple"
+          onclick="showInfo('popup')"
+          tabindex="0"
+          role="button"
+          aria-label="Popup"
+          onkeydown="if (event.key === 'Enter' || event.key === ' ') showInfo('popup');"
+        >
           <rect x="44" y="700" width="172" height="56" rx="10" stroke-width="0.5" />
           <text class="th" x="130" y="722" text-anchor="middle" dominant-baseline="central">
             Popup
@@ -579,7 +642,14 @@
         </g>
 
         <!-- Options -->
-        <g class="node c-gray" onclick="showInfo('options')">
+        <g
+          class="node c-gray"
+          onclick="showInfo('options')"
+          tabindex="0"
+          role="button"
+          aria-label="Options page"
+          onkeydown="if (event.key === 'Enter' || event.key === ' ') showInfo('options');"
+        >
           <rect x="464" y="700" width="172" height="56" rx="10" stroke-width="0.5" />
           <text class="th" x="550" y="722" text-anchor="middle" dominant-baseline="central">
             Options page
@@ -625,7 +695,9 @@
     <footer>
       <p>
         Late Meet — Privacy-First AI Meeting Copilot &nbsp;·&nbsp;
-        <a href="https://github.com/shouri123/Late-Meet" target="_blank">GitHub →</a>
+        <a href="https://github.com/shouri123/Late-Meet" target="_blank" rel="noopener noreferrer"
+          >GitHub →</a
+        >
       </p>
     </footer>
 
